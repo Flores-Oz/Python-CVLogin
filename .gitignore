@@ -1,0 +1,5 @@
+# Ignorar todo el contenido dentro de la carpeta Data
+Data/*
+
+# No ignorar el archivo .gitkeep dentro de la carpeta Data (o cualquier archivo que uses para mantener la carpeta en el repositorio)
+!Data/.gitkeep
