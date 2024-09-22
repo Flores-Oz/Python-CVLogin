@@ -32,7 +32,7 @@ while True:
         rostro = cv2.resize(rostro,(150,150),interpolation=cv2.INTER_CUBIC)
         cv2.imwrite(personPath + '/rotro_{}.jpg'.format(count),rostro)
         count = count + 1
-    cv2.imshow('frame',frame)
+    cv2.imshow('Captura',frame)
 
     k =  cv2.waitKey(1)
     if k == 27 or count >= 300:
