@@ -2,7 +2,7 @@ import cv2
 import os
 import numpy as np
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import messagebox
 from PIL import Image, ImageTk
 
 # Directorio para almacenar imágenes y modelos
@@ -23,26 +23,41 @@ def capture_face():
     global cap
     if cap is None:
         open_camera()
-    ret, frame = cap.read()
-    if not ret:
-        messagebox.showerror("Error", "No se puede leer el frame del video.")
-        return
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    faceClassif = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-    faces = faceClassif.detectMultiScale(gray, 1.3, 5)
-    for (x, y, w, h) in faces:
-        face = gray[y:y+h, x:x+w]
-        face = cv2.resize(face, (200, 200), interpolation=cv2.INTER_CUBIC)
-        person_name = entry_name.get()
-        if person_name:
-            person_path = os.path.join(dataPath, person_name)
-            if not os.path.exists(person_path):
-                os.makedirs(person_path)
-            img_path = os.path.join(person_path, f'face_{len(os.listdir(person_path))}.jpg')
-            cv2.imwrite(img_path, face)
-            messagebox.showinfo("Info", "Cara capturada y guardada.")
-        else:
-            messagebox.showwarning("Warning", "Por favor, ingrese un nombre.")
+    
+    person_name = entry_name.get()
+    if person_name:
+        person_path = os.path.join(dataPath, person_name)
+        if not os.path.exists(person_path):
+            os.makedirs(person_path)
+        
+        count = 0
+        while count < 40:  # Captura 30 fotos
+            ret, frame = cap.read()
+            if not ret:
+                messagebox.showerror("Error", "No se puede leer el frame del video.")
+                break
+            
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            faceClassif = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+            faces = faceClassif.detectMultiScale(gray, 1.3, 5)
+            
+            for (x, y, w, h) in faces:
+                face = gray[y:y+h, x:x+w]
+                face = cv2.resize(face, (100, 100), interpolation=cv2.INTER_CUBIC)  # Reducción del tamaño de la imagen
+                img_path = os.path.join(person_path, f'face_{count}.jpg')
+                cv2.imwrite(img_path, face)
+                count += 1
+            
+            cv2.putText(frame, f'Capturando foto {count}/40', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            cv2.imshow('Capturando rostros', frame)
+
+            if cv2.waitKey(1) & 0xFF == 27:  # Permitir salir con la tecla 'Esc'
+                break
+
+        cv2.destroyWindow('Capturando rostros')
+        messagebox.showinfo("Info", f"Captura completada. Se guardaron {count} fotos.")
+    else:
+        messagebox.showwarning("Warning", "Por favor, ingrese un nombre.")
 
 def delete_person():
     person_name = entry_name.get()
@@ -79,7 +94,7 @@ def identify_faces():
                 if os.path.isfile(img_path):
                     img = cv2.imread(img_path, 0)
                     if img is not None:
-                        img = cv2.resize(img, (200, 200))
+                        img = cv2.resize(img, (100, 100))  # Reducción del tamaño de la imagen
                         facesData.append(img)
                         labels.append(label)
             names[label] = nameDir  # Guardar el nombre de la persona con la etiqueta
@@ -131,7 +146,7 @@ def show_frame():
         
         for (x, y, w, h) in faces:
             rostro = gray[y:y+h, x:x+w]
-            rostro = cv2.resize(rostro, (200, 200), interpolation=cv2.INTER_CUBIC)
+            rostro = cv2.resize(rostro, (100, 100), interpolation=cv2.INTER_CUBIC)  # Reducción del tamaño de la imagen
             result = recognizer.predict(rostro)
             label, confidence = result
             
