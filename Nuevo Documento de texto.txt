@@ -1,0 +1,7 @@
+Pasos:
+Instalar pip install virtualenv
+virtualenv fr_venv
+fr_venv\Scripts\activate
+pip freeze
+pip install face-recognition
+Se debe Instalar CMake
