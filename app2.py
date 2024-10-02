@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import messagebox
 import cv2
-import numpy as np
 import os
+import time
 import subprocess
 
 class FaceRecognitionApp:
@@ -25,11 +25,6 @@ class FaceRecognitionApp:
         self.lbl_user.pack()
         self.entry_user = tk.Entry(self.root)
         self.entry_user.pack()
-        
-        self.lbl_pass = tk.Label(self.root, text="Contraseña:")
-        self.lbl_pass.pack()
-        self.entry_pass = tk.Entry(self.root, show="*")
-        self.entry_pass.pack()
         
         self.btn_login = tk.Button(self.root, text="Iniciar Sesión", command=self.face_login)
         self.btn_login.pack(pady=10)
@@ -69,16 +64,13 @@ class FaceRecognitionApp:
         self.start_face_registration(username)
     
     def username_exists(self, username):
-        # Check if username already exists in the dataset folder
         return os.path.exists(f"dataset/{username}")
 
     def start_face_registration(self, username):
-        # Create a directory for the user if it doesn't exist
         user_dir = f"dataset/{username}"
         if not os.path.exists(user_dir):
             os.makedirs(user_dir)
         
-        # Start the camera and capture images for face registration
         capture = cv2.VideoCapture(0)
         num_images = 0
         while num_images < 100:
@@ -95,45 +87,75 @@ class FaceRecognitionApp:
 
     def face_login(self):
         username = self.entry_user.get()
-        password = self.entry_pass.get()
-        # Placeholder for password check
-        if not self.password_is_correct(username, password):
-            messagebox.showerror("Error", "Nombre de usuario o contraseña incorrectos.")
+        
+        if not username:
+            messagebox.showerror("Error", "Por favor, ingrese un nombre de usuario.")
             return
         
-        # Start face recognition for login
+        if not self.username_exists(username):
+            messagebox.showerror("Error", "El nombre de usuario no existe.")
+            return
+        
         self.start_face_recognition(username)
-    
-    def password_is_correct(self, username, password):
-        # Placeholder for password check
-        # You should implement actual password verification here
-        return True
-    
+
     def start_face_recognition(self, username):
-        # Start the camera and attempt to recognize the face
         capture = cv2.VideoCapture(0)
         recognized = False
-        while not recognized:
+        wait_time = 10
+        start_time = time.time()
+        
+        while not recognized and (time.time() - start_time < wait_time):
             ret, frame = capture.read()
             if ret:
                 cv2.imshow("Face Recognition", frame)
-                # Perform face recognition
                 recognized = self.recognize_face(frame, username)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
+        
         capture.release()
         cv2.destroyAllWindows()
+        
         if recognized:
             messagebox.showinfo("Acceso Concedido", "Ingreso exitoso.")
+            # Abre el módulo de gestión de usuarios
+            subprocess.Popen(["python", "user_management.py"])
+           # self.root.quit()  # Comentar esta línea para mantener la ventana principal abierta
+          # Oculta la ventana principal en lugar de cerrarla
+            self.root.withdraw()
         else:
             messagebox.showerror("Acceso Denegado", "No se reconoció la cara.")
 
     def recognize_face(self, frame, username):
-        # Placeholder for face recognition logic
-        # Implement your face recognition logic here
-        return True
+        user_dir = f"dataset/{username}"
+        recognizer = cv2.face.LBPHFaceRecognizer_create()
+        
+        try:
+            recognizer.read(f'{user_dir}/model.yml')
+        except FileNotFoundError:
+            messagebox.showerror("Error", "El archivo del modelo no se encontró. Asegúrate de haber registrado la cara correctamente.")
+            return False
+        except cv2.error as e:
+            messagebox.showerror("Error", f"No se pudo cargar el modelo facial: {e}")
+            return False
+        except Exception as e:
+            messagebox.showerror("Error", f"Ocurrió un error inesperado: {e}")
+            return False
 
-# Create the Tkinter window and start the application
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
+        
+        print(f"Faces detected: {len(faces)}")  # Mensaje de depuración
+        for (x, y, w, h) in faces:
+            face_roi = gray[y:y+h, x:x+w]
+            label, confidence = recognizer.predict(face_roi)
+            print(f"Label: {label}, Confidence: {confidence}")  # Mensaje de depuración
+            if confidence < 200:  # Ajusta el umbral de confianza
+                return True
+        
+        return False
+
+# Crear la ventana de Tkinter y ejecutar la aplicación
 root = tk.Tk()
 app = FaceRecognitionApp(root)
 root.mainloop()
