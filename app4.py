@@ -7,7 +7,7 @@ import subprocess
 import numpy as np  # Necesario para manejar etiquetas en el entrenamiento
 
 class FaceRecognitionApp:
-
+    
     def __init__(self, root):
         self.root = root
         self.root.title("Face Recognition App")
@@ -97,12 +97,18 @@ class FaceRecognitionApp:
         for img_name in os.listdir(user_dir):
             img_path = os.path.join(user_dir, img_name)
             img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
-            faces.append(img)
-            labels.append(0)  # Etiqueta correspondiente al usuario (0 ya que es un solo usuario)
-        
-        recognizer.train(faces, np.array(labels))
-        recognizer.save(f'{user_dir}/model.yml')
-        print(f"Modelo guardado en {user_dir}/model.yml")
+            if img is not None:
+                faces.append(img)
+                labels.append(0)  # Etiqueta correspondiente al usuario (0 ya que es un solo usuario)
+            else:
+                print(f"No se pudo leer la imagen {img_name}")
+
+        if len(faces) > 0:
+            recognizer.train(faces, np.array(labels))
+            recognizer.save(f'{user_dir}/model.yml')
+            print(f"Modelo guardado en {user_dir}/model.yml")
+        else:
+            print("No se encontraron suficientes imágenes para entrenar el modelo.")
 
     def face_login(self):
         username = self.entry_user.get()
@@ -157,13 +163,19 @@ class FaceRecognitionApp:
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
         faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
+
+        if len(faces) == 0:
+            print("No se detectaron rostros.")
+            return False  # No se detectó ningún rostro
         
         for (x, y, w, h) in faces:
+            print(f"Rostro detectado en posición: x={x}, y={y}, w={w}, h={h}")
             face_roi = gray[y:y+h, x:x+w]
             label, confidence = recognizer.predict(face_roi)
-            if confidence < 120:  # Ajusta el umbral de confianza si es necesario
+            print(f"Etiqueta: {label}, Confianza: {confidence}")
+            
+            if confidence < 80:  # Ajustar el umbral de confianza
                 return True
-        
         return False
 
 # Crear la ventana de Tkinter y ejecutar la aplicación

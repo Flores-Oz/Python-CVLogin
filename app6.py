@@ -64,7 +64,7 @@ class FaceRecognitionApp:
             return
 
         self.start_face_registration(username)
-        self.train_model(username)  # Llamar a la función de entrenamiento después de capturar las imágenes
+        self.train_model()  # Entrenamos el modelo con todos los usuarios después de registrar
     
     def username_exists(self, username):
         return os.path.exists(f"dataset/{username}")
@@ -74,7 +74,7 @@ class FaceRecognitionApp:
         if not os.path.exists(user_dir):
             os.makedirs(user_dir)
         
-        capture = cv2.VideoCapture(1)
+        capture = cv2.VideoCapture(1)  # Cambié a la cámara principal (0)
         num_images = 0
         while num_images < 100:
             ret, frame = capture.read()
@@ -88,21 +88,33 @@ class FaceRecognitionApp:
         cv2.destroyAllWindows()
         messagebox.showinfo("Registro Completo", "Registro facial completado exitosamente.")
     
-    def train_model(self, username):
-        user_dir = f"dataset/{username}"
+    def train_model(self):
+        dataset_dir = "dataset"
         recognizer = cv2.face.LBPHFaceRecognizer_create()
         faces = []
         labels = []
+        label_id = 0
+        label_dict = {}  # Diccionario para almacenar las etiquetas de cada usuario
         
-        for img_name in os.listdir(user_dir):
-            img_path = os.path.join(user_dir, img_name)
-            img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
-            faces.append(img)
-            labels.append(0)  # Etiqueta correspondiente al usuario (0 ya que es un solo usuario)
+        # Recorrer todas las carpetas (usuarios) en el dataset
+        for user_dir in os.listdir(dataset_dir):
+            user_path = os.path.join(dataset_dir, user_dir)
+            if os.path.isdir(user_path):
+                label_dict[user_dir] = label_id  # Asignar una etiqueta única a cada usuario
+                for img_name in os.listdir(user_path):
+                    img_path = os.path.join(user_path, img_name)
+                    img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+                    if img is not None:
+                        faces.append(img)
+                        labels.append(label_id)
+                label_id += 1
         
-        recognizer.train(faces, np.array(labels))
-        recognizer.save(f'{user_dir}/model.yml')
-        print(f"Modelo guardado en {user_dir}/model.yml")
+        if len(faces) > 0:
+            recognizer.train(faces, np.array(labels))
+            recognizer.save(f'{dataset_dir}/model.yml')
+            print(f"Modelo guardado en {dataset_dir}/model.yml")
+        else:
+            print("No se encontraron suficientes imágenes para entrenar el modelo.")
 
     def face_login(self):
         username = self.entry_user.get()
@@ -118,7 +130,7 @@ class FaceRecognitionApp:
         self.start_face_recognition(username)
 
     def start_face_recognition(self, username):
-        capture = cv2.VideoCapture(1)
+        capture = cv2.VideoCapture(1)  
         recognized = False
         wait_time = 10
         start_time = time.time()
@@ -142,11 +154,11 @@ class FaceRecognitionApp:
             messagebox.showerror("Acceso Denegado", "No se reconoció la cara.")
 
     def recognize_face(self, frame, username):
-        user_dir = f"dataset/{username}"
+        dataset_dir = "dataset"
         recognizer = cv2.face.LBPHFaceRecognizer_create()
         
         try:
-            recognizer.read(f'{user_dir}/model.yml')
+            recognizer.read(f'{dataset_dir}/model.yml')
         except FileNotFoundError:
             messagebox.showerror("Error", "El archivo del modelo no se encontró. Asegúrate de haber registrado la cara correctamente.")
             return False
@@ -161,6 +173,7 @@ class FaceRecognitionApp:
         for (x, y, w, h) in faces:
             face_roi = gray[y:y+h, x:x+w]
             label, confidence = recognizer.predict(face_roi)
+            print(f"Etiqueta: {label}, Confianza: {confidence}")
             if confidence < 120:  # Ajusta el umbral de confianza si es necesario
                 return True
         
