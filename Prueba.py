@@ -1,7 +1,7 @@
 import cv2
 
 # El índice de la cámara puede variar, generalmente es 0 o 1
-cap = cv2.VideoCapture(0)  # Cambia el número si no ves el video
+cap = cv2.VideoCapture(1)  # Cambia el número si no ves el video
 
 while True:
     ret, frame = cap.read()

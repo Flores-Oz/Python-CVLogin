@@ -5,3 +5,4 @@ fr_venv\Scripts\activate
 pip freeze
 pip install face-recognition
 Se debe Instalar CMake
+pip install face-recognition

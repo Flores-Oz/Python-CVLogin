@@ -4,6 +4,7 @@ import cv2
 import os
 import time
 import subprocess
+import numpy as np  # Necesario para manejar etiquetas en el entrenamiento
 
 class FaceRecognitionApp:
     def __init__(self, root):
@@ -62,6 +63,7 @@ class FaceRecognitionApp:
             return
 
         self.start_face_registration(username)
+        self.train_model(username)  # Llamar a la función de entrenamiento después de capturar las imágenes
     
     def username_exists(self, username):
         return os.path.exists(f"dataset/{username}")
@@ -84,6 +86,22 @@ class FaceRecognitionApp:
         capture.release()
         cv2.destroyAllWindows()
         messagebox.showinfo("Registro Completo", "Registro facial completado exitosamente.")
+    
+    def train_model(self, username):
+        user_dir = f"dataset/{username}"
+        recognizer = cv2.face.LBPHFaceRecognizer_create()
+        faces = []
+        labels = []
+        
+        for img_name in os.listdir(user_dir):
+            img_path = os.path.join(user_dir, img_name)
+            img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+            faces.append(img)
+            labels.append(0)  # Etiqueta correspondiente al usuario (0 ya que es un solo usuario)
+        
+        recognizer.train(faces, np.array(labels))
+        recognizer.save(f'{user_dir}/model.yml')
+        print(f"Modelo guardado en {user_dir}/model.yml")
 
     def face_login(self):
         username = self.entry_user.get()
@@ -117,10 +135,7 @@ class FaceRecognitionApp:
         
         if recognized:
             messagebox.showinfo("Acceso Concedido", "Ingreso exitoso.")
-            # Abre el módulo de gestión de usuarios
             subprocess.Popen(["python", "user_management.py"])
-           # self.root.quit()  # Comentar esta línea para mantener la ventana principal abierta
-          # Oculta la ventana principal en lugar de cerrarla
             self.root.withdraw()
         else:
             messagebox.showerror("Acceso Denegado", "No se reconoció la cara.")
@@ -137,20 +152,15 @@ class FaceRecognitionApp:
         except cv2.error as e:
             messagebox.showerror("Error", f"No se pudo cargar el modelo facial: {e}")
             return False
-        except Exception as e:
-            messagebox.showerror("Error", f"Ocurrió un error inesperado: {e}")
-            return False
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
         faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
         
-        print(f"Faces detected: {len(faces)}")  # Mensaje de depuración
         for (x, y, w, h) in faces:
             face_roi = gray[y:y+h, x:x+w]
             label, confidence = recognizer.predict(face_roi)
-            print(f"Label: {label}, Confidence: {confidence}")  # Mensaje de depuración
-            if confidence < 200:  # Ajusta el umbral de confianza
+            if confidence < 200:  # Ajusta el umbral de confianza si es necesario
                 return True
         
         return False

@@ -1,8 +1,7 @@
 import tkinter as tk
-from tkinter import messagebox  # Importar messagebox correctamente
+from tkinter import messagebox
 import os
 import shutil
-from app2  import FaceRecognitionApp  # Asegúrate de que la ruta sea correcta
 
 class UserManagementApp:
     def __init__(self, root):
@@ -28,9 +27,6 @@ class UserManagementApp:
         self.btn_delete = tk.Button(self.root, text="Eliminar Usuario", command=self.delete_user)
         self.btn_delete.pack(pady=5)
 
-        self.btn_back = tk.Button(self.root, text="Volver", command=self.go_back)
-        self.btn_back.pack(pady=5)
-
     def load_users(self):
         self.user_listbox.delete(0, tk.END)  # Limpiar el listbox
         user_dirs = os.listdir("dataset")
@@ -50,13 +46,6 @@ class UserManagementApp:
             shutil.rmtree(user_dir)  # Elimina el directorio del usuario
             messagebox.showinfo("Éxito", "Usuario eliminado con éxito.")
             self.load_users()  # Recargar la lista de usuarios
-
-    def go_back(self):
-        self.root.destroy()  # Cerrar la ventana actual
-        # Regresar a la ventana de inicio de sesión
-        root = tk.Tk()
-        app = FaceRecognitionApp(root)  # Ahora debería estar definida
-        root.mainloop()
 
 # Crear la ventana de Tkinter y ejecutar la aplicación
 if __name__ == "__main__":
